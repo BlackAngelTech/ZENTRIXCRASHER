@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>VECTOR CRASHER | Enter the Abyss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a1a;
+      font-family: 'Rajdhani', sans-serif;
+      color: #eee;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* animated particles canvas */
+    #particles-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* scanlines + grid overlay */
+    .scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg, rgba(0,255,255,0.03) 0px, rgba(0,255,255,0.03) 2px, transparent 2px, transparent 6px);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,240,255,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .cursor-glow {
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,240,255,0.15), transparent 70%);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      transition: transform 0.05s linear;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 30% 20%, rgba(0,240,255,0.05), rgba(0,0,0,0.7));
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 1s ease-out forwards;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* header */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 15px 0;
+      border-bottom: 1px solid rgba(0,240,255,0.3);
+      backdrop-filter: blur(5px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo svg {
+      width: 50px;
+      height: 50px;
+      filter: drop-shadow(0 0 8px cyan);
+      animation: pulseGlow 2s infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 4px cyan); }
+      50% { filter: drop-shadow(0 0 15px magenta); }
+    }
+
+    .logo-text {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.6rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #00f0ff, #ff00aa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: 2px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 20px;
+    }
+
+    .nav-btn {
+      background: rgba(0,240,255,0.1);
+      border: 1px solid #00f0ff;
+      padding: 10px 32px;
+      border-radius: 40px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #00f0ff;
+      transition: 0.3s;
+      backdrop-filter: blur(5px);
+      font-size: 1rem;
+    }
+
+    .nav-btn i {
+      margin-right: 8px;
+    }
+
+    .nav-btn:hover {
+      background: #00f0ff;
+      color: #000;
+      box-shadow: 0 0 25px #00f0ff;
+      border-color: #fff;
+    }
+
+    /* hero */
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      margin: 40px 0;
+    }
+
+    .hero-image {
+      margin-bottom: 30px;
+      position: relative;
+      border-radius: 40px;
+      background: linear-gradient(135deg, cyan, magenta);
+      padding: 4px;
+      box-shadow: 0 0 30px rgba(0,240,255,0.5);
+      transition: 0.3s;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    /* pulsing rings around image */
+    .hero-image::before,
+    .hero-image::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid cyan;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      animation: ringPulse 2.5s ease-out infinite;
+    }
+
+    .hero-image::after {
+      animation-delay: 1.25s;
+    }
+
+    @keyframes ringPulse {
+      0% {
+        width: 100%;
+        height: 100%;
+        opacity: 0.6;
+      }
+      100% {
+        width: 140%;
+        height: 140%;
+        opacity: 0;
+      }
+    }
+
+    .hero-image img {
+      max-width: 280px;
+      width: 100%;
+      filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+      border-radius: 36px;
+      display: block;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+
+    .glitch {
+      font-family: 'Orbitron', monospace;
+      font-size: 3.8rem;
+      font-weight: 900;
+      position: relative;
+      color: #fff;
+      text-shadow: 0 0 8px cyan;
+      margin-bottom: 15px;
+      animation: glitchText 2.5s infinite;
+    }
+
+    @keyframes glitchText {
+      0%, 100% { text-shadow: 2px 0 #ff00ff, -2px 0 #00f0ff; transform: skew(0deg); }
+      20% { text-shadow: -2px 0 #ff00ff, 2px 0 #00f0ff; transform: skew(1deg); }
+      40% { text-shadow: 2px 0 #ff00ff, -2px 0 #00f0ff; transform: skew(-1deg); }
+    }
+
+    .typing-container {
+      font-size: 1.7rem;
+      margin: 15px 0;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #typed-text {
+      font-weight: 700;
+      color: #ff44cc;
+      border-right: 3px solid cyan;
+      white-space: nowrap;
+      overflow: hidden;
+      display: inline-block;
+      animation: blink 0.8s step-end infinite;
+    }
+
+    @keyframes blink {
+      50% { border-color: transparent; }
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 25px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .cta {
+      background: linear-gradient(135deg, #00f0ff, #aa00ff);
+      border: none;
+      padding: 14px 40px;
+      border-radius: 50px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      text-decoration: none;
+      color: #000;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      transition: 0.3s;
+      box-shadow: 0 0 20px rgba(0,240,255,0.5);
+    }
+
+    .cta:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 35px cyan;
+    }
+
+    .cta-secondary {
+      background: transparent;
+      border: 2px solid cyan;
+      color: cyan;
+      box-shadow: none;
+    }
+
+    .cta-secondary:hover {
+      background: cyan;
+      color: black;
+    }
+
+    /* Floating WhatsApp button */
+    .whatsapp-float {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #25D366;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: white;
+      box-shadow: 0 0 20px rgba(37, 211, 102, 0.6);
+      transition: 0.3s;
+      z-index: 20;
+      animation: pulseWhatsApp 1.5s infinite;
+      text-decoration: none;
+    }
+
+    .whatsapp-float:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 35px #25D366;
+    }
+
+    @keyframes pulseWhatsApp {
+      0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+    }
+
+    /* footer */
+    footer {
+      text-align: center;
+      padding: 25px 0 10px;
+      border-top: 1px solid rgba(0,240,255,0.2);
+      margin-top: 50px;
+    }
+
+    .social-links {
+      display: flex;
+      justify-content: center;
+      gap: 35px;
+      flex-wrap: wrap;
+    }
+
+    .social-links a {
+      color: cyan;
+      font-size: 1.4rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,240,255,0.1);
+      padding: 8px 20px;
+      border-radius: 50px;
+      border: 1px solid rgba(0,240,255,0.3);
+      transition: 0.3s;
+      backdrop-filter: blur(4px);
+    }
+
+    .social-links a i {
+      font-size: 1.6rem;
+    }
+
+    .social-links a:hover {
+      background: cyan;
+      color: #000;
+      transform: translateY(-3px);
+      border-color: cyan;
+      box-shadow: 0 0 20px cyan;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,0,0,0.5);
+      padding: 5px 15px;
+      border-radius: 50px;
+      backdrop-filter: blur(4px);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background: #00ff88;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #00ff88;
+      animation: blinkStatus 1.2s infinite;
+    }
+
+    @keyframes blinkStatus {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    footer p {
+      margin-top: 15px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+
+    /* floating skulls (pseudo-elements) */
+    .floating-skull {
+      position: fixed;
+      font-size: 1.2rem;
+      opacity: 0.2;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatSkull 20s linear infinite;
+    }
+
+    @keyframes floatSkull {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10% { opacity: 0.3; }
+      90% { opacity: 0.3; }
+      100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
+    }
+
+    @media (max-width: 700px) {
+      .glitch { font-size: 2.3rem; }
+      .typing-container { font-size: 1.2rem; flex-direction: column; align-items: center; }
+      .hero-image img { max-width: 200px; }
+      .nav-btn { padding: 8px 20px; }
+      .social-links a { padding: 5px 12px; font-size: 0.9rem; gap: 5px; }
+      .social-links a i { font-size: 1.2rem; }
+      .whatsapp-float { width: 50px; height: 50px; font-size: 1.6rem; bottom: 20px; right: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="particles-canvas"></canvas>
+<div class="scanlines"></div>
+<div class="grid-overlay"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="overlay"></div>
+
+<!-- Floating skulls (background) -->
+<div class="floating-skull" style="left: 10%; animation-duration: 25s;">💀</div>
+<div class="floating-skull" style="left: 30%; animation-duration: 30s; animation-delay: 2s;">☠️</div>
+<div class="floating-skull" style="left: 60%; animation-duration: 22s; animation-delay: 5s;">💀</div>
+<div class="floating-skull" style="left: 85%; animation-duration: 28s; animation-delay: 1s;">🕷️</div>
+<div class="floating-skull" style="left: 45%; animation-duration: 35s; animation-delay: 7s;">⚡</div>
+
+<!-- Floating WhatsApp Chat Button -->
+<a href="https://whatsapp.com/channel/0029VbD1fqe5kg6xDhBs5G3M" target="_blank" class="whatsapp-float">
+  <i class="fab fa-whatsapp"></i>
+</a>
+
+<div class="container">
+  <div class="navbar">
+    <div class="logo">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 10 L70 25 L80 50 L70 75 L50 90 L30 75 L20 50 L30 25 L50 10Z" fill="none" stroke="#00f0ff" stroke-width="2"/>
+        <circle cx="38" cy="45" r="3" fill="#ff00ff"/>
+        <circle cx="62" cy="45" r="3" fill="#ff00ff"/>
+        <path d="M45 60 Q50 68 55 60" stroke="#00f0ff" stroke-width="2" fill="none"/>
+        <path d="M50 75 L50 85 M40 80 L50 85 L60 80" stroke="#ff00ff" stroke-width="1.5"/>
+      </svg>
+      <span class="logo-text">VECTOR CRASHER</span>
+    </div>
+    <div class="nav-buttons">
+      <a href="/login.html" class="nav-btn"><i class="fas fa-key"></i> Login</a>
+      <a href="/register.html" class="nav-btn"><i class="fas fa-rocket"></i> Register</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-image">
+      <img src="https://files.catbox.moe/yr94mv.jpeg" alt="Vector Crasher Logo"
+           onerror="this.src='https://files.catbox.moe/yr94mv.jpeg'">
+    </div>
+    <h1 class="glitch">VECTOR CRASHER</h1>
+    <div class="typing-container">
+      <span>⚡</span>
+      <span id="typed-text"></span>
+    </div>
+    <div class="cta-buttons">
+      <a href="/login.html" class="cta"><i class="fas fa-skull"></i> Enter The Void</a>
+      <a href="/register.html" class="cta cta-secondary"><i class="fas fa-user-plus"></i> Create Account</a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="social-links">
+      <a href="https://whatsapp.com/channel/0029VbD1fqe5kg6xDhBs5G3M" target="_blank">
+        <i class="fab fa-whatsapp"></i> InfinityTech
+      </a>
+      <a href="https://whatsapp.com/channel/0029VbD1fqe5kg6xDhBs5G3M" target="_blank">
+        <i class="fab fa-whatsapp"></i> ZentrixTech
+      </a>
+      <a href="#" target="_blank">
+        <i class="fab fa-telegram"></i> Telegram
+      </a>
+      <a href="https://wa.me/263718036108" target="_blank">
+        <i class="fab fa-whatsapp"></i> Report Bug
+      </a>
+    </div>
+    <div class="status">
+      <span class="status-dot"></span>
+      <span>System Status: Operational / Fierce</span>
+    </div>
+    <p>© 2026 VECTOR CRASHER — Developed by ZENTRIX TECH. Pure chaos.</p>
+  </footer>
+</div>
+
+<script>
+  // ---- Mouse glow ----
+  const cursorGlow = document.getElementById('cursorGlow');
+  document.addEventListener('mousemove', (e) => {
+    cursorGlow.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+  });
+
+  // ---- Particles canvas ----
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function createParticles() {
+    const particleCount = 120; // increased for richness
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 2.5 + 1,
+        speedX: (Math.random() - 0.5) * 0.8,
+        speedY: (Math.random() - 0.5) * 0.6,
+        color: `rgba(0, ${Math.floor(150 + Math.random() * 105)}, 255, ${Math.random() * 0.6 + 0.2})`
+      });
+    }
+  }
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let p of particles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      p.x += p.speedX;
+      p.y += p.speedY;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+    }
+    requestAnimationFrame(drawParticles);
+  }
+
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    particles = [];
+    createParticles();
+  });
+  resizeCanvas();
+  createParticles();
+  drawParticles();
+
+  // ---- Typing animation ----
+  const phrases = [
+    "Crash anything. Anywhere.",
+    "iOS / Android / Groups.",
+    "Zero trace. Full power.",
+    "Your device is your weapon.",
+    "Authenticate. Execute. Destroy.",
+    "WhatsApp chaos protocol.",
+    "No simulations. Pure chaos."
+  ];
+  let idx = 0;
+  let charIndex = 0;
+  let currentPhrase = phrases[idx];
+  let isDeleting = false;
+  const typedSpan = document.getElementById("typed-text");
+
+  function typeEffect() {
+    if (isDeleting) {
+      typedSpan.textContent = currentPhrase.substring(0, charIndex - 1);
+      charIndex--;
+    } else {
+      typedSpan.textContent = currentPhrase.substring(0, charIndex + 1);
+      charIndex++;
+    }
+    if (!isDeleting && charIndex === currentPhrase.length) {
+      isDeleting = true;
+      setTimeout(typeEffect, 1800);
+      return;
+    }
+    if (isDeleting && charIndex === 0) {
+      isDeleting = false;
+      idx = (idx + 1) % phrases.length;
+      currentPhrase = phrases[idx];
+    }
+    setTimeout(typeEffect, isDeleting ? 50 : 100);
+  }
+  typeEffect();
+</script>
+</body>
+  </html>
