@@ -1,0 +1,19 @@
+{
+  "name": "vector-crasher-backend",
+  "version": "1.0.0",
+  "description": "Full backend for Vector Crasher bug platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pino": "^8.20.0"
+  }
+}
