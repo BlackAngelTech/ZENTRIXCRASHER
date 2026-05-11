@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  vector-crasher:
+    build: .
+    container_name: vector-crasher
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data          # persist user and bug data
+      - ./uploads:/app/uploads    # persist avatars
+      - ./zentrixsessions:/app/zentrixsessions  # persist WhatsApp sessions
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=your_secret_key_here
+      - ADMIN_PASSWORD=ZentrixTechOfficial
