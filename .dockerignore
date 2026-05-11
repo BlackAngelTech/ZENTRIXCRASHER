@@ -1,0 +1,8 @@
+node_modules
+data
+uploads
+zentrixsessions
+.env
+.git
+*.log
+.DS_Store
