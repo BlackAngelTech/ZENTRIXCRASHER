@@ -1,4 +1,4 @@
-w
+
 FROM node:20-alpine
 
 # Install git and build tools (required for native modules and GitHub dependencies)
