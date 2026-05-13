@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>VECTOR CRASHER | Reels</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0a0a1a;
+      font-family: 'Rajdhani', sans-serif;
+      color: #eee;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+    /* Particles & overlays (same as other pages) */
+    #particles-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg, rgba(0,255,255,0.03) 0px, rgba(0,255,255,0.03) 2px, transparent 2px, transparent 6px);
+      pointer-events: none;
+      z-index: 3;
+    }
+    .grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .cursor-glow {
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,240,255,0.15), transparent 70%);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      transition: transform 0.05s linear;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 30% 20%, rgba(0,240,255,0.05), rgba(0,0,0,0.7));
+      z-index: 1;
+      pointer-events: none;
+    }
+    /* hamburger & sidebar */
+    .hamburger {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 45px;
+      height: 45px;
+      background: rgba(10,20,40,0.9);
+      border: 1px solid cyan;
+      border-radius: 12px;
+      cursor: pointer;
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+    }
+    .hamburger:hover { background: cyan; box-shadow: 0 0 15px cyan; }
+    .hamburger span { width: 25px; height: 3px; background: cyan; transition: 0.2s; }
+    .hamburger:hover span { background: #000; }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
+      height: 100%;
+      background: rgba(5,10,20,0.95);
+      backdrop-filter: blur(20px);
+      border-right: 2px solid cyan;
+      z-index: 1000;
+      transition: left 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+      padding-top: 80px;
+    }
+    .sidebar.open { left: 0; }
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px 25px;
+      color: #ccc;
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 1px solid rgba(0,240,255,0.1);
+      transition: 0.2s;
+    }
+    .sidebar a i { width: 25px; color: cyan; }
+    .sidebar a:hover { background: rgba(0,240,255,0.1); padding-left: 35px; color: white; }
+
+    /* Reels container */
+    .reels-container {
+      position: relative;
+      z-index: 10;
+      height: 100vh;
+      width: 100%;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .reel {
+      height: 100vh;
+      width: 100%;
+      scroll-snap-align: start;
+      position: relative;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .reel video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .reel-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 60px 20px 20px;
+      background: linear-gradient(0deg, rgba(0,0,0,0.8), transparent);
+      color: white;
+      pointer-events: none;
+    }
+    .reel-user {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
+    .reel-caption {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    .reel-actions {
+      position: absolute;
+      right: 15px;
+      bottom: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 20;
+      pointer-events: auto;
+    }
+    .action-btn {
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
+      transition: 0.2s;
+    }
+    .action-btn:hover { transform: scale(1.1); background: cyan; color: black; }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: cyan;
+    }
+    @media (max-width: 600px) {
+      .reel-actions { bottom: 60px; right: 10px; gap: 15px; }
+      .action-btn { width: 40px; height: 40px; font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="scanlines"></div>
+<div class="grid-overlay"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="overlay"></div>
+<div class="hamburger" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</div>
+<div class="sidebar" id="sidebar">
+  <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+  <a href="/connect.html"><i class="fab fa-whatsapp"></i> Connect Device</a>
+  <a href="/ban.html"><i class="fas fa-skull"></i> Ban Panel</a>
+  <a href="/unban.html"><i class="fas fa-infinity"></i> Unban Panel</a>
+  <a href="/media.html"><i class="fas fa-photo-video"></i> Media Hub</a>
+  <a href="/chatroom.html"><i class="fas fa-comments"></i> Chatroom</a>
+  <a href="/api.html"><i class="fas fa-code"></i> API Docs</a>
+  <a href="/account.html"><i class="fas fa-user-cog"></i> Account</a>
+  <a href="/developers.html"><i class="fas fa-code-branch"></i> Developers / Support</a>
+  <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+</div>
+
+<div class="reels-container" id="reelsContainer">
+  <div class="loading">Loading reels...</div>
+</div>
+
+<script>
+  // Auth check
+  const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  if (!token) window.location.href = '/login.html';
+
+  // ========== PEXELS API CONFIG ==========
+  const PEXELS_API_KEY = 'YOUR_PEXELS_API_KEY'; // 🔑 Replace with your key from https://www.pexels.com/api/
+  // If no key, fallback to mock videos
+  const USE_MOCK = !PEXELS_API_KEY || PEXELS_API_KEY === 'YOUR_PEXELS_API_KEY';
+
+  let currentPage = 1;
+  let isLoading = false;
+  let hasMore = true;
+  let videos = [];
+
+  // Mock video data (if no API key)
+  const mockVideos = [
+    { id: 1, videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-woods-826-large.mp4', user: 'naturelover', caption: 'Peaceful forest stream 🌲' },
+    { id: 2, videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-waves-breaking-on-the-seashore-1096-large.mp4', user: 'oceanwaves', caption: 'Calming waves 🌊' },
+    { id: 3, videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-waterfalls-in-the-forest-1257-large.mp4', user: 'adventuretime', caption: 'Hidden waterfall 💦' },
+    { id: 4, videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-lights-1232-large.mp4', user: 'cybergirl', caption: 'Neon dreams 🌆' },
+    { id: 5, videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-mountains-with-sunset-1580-large.mp4', user: 'travelbug', caption: 'Sunset magic 🌄' }
+  ];
+
+  // Fetch videos from Pexels API (videos, landscape orientation, popular)
+  async function fetchVideosFromPexels(page = 1) {
+    const url = `https://api.pexels.com/videos/popular?per_page=10&page=${page}`;
+    try {
+      const response = await fetch(url, {
+        headers: { 'Authorization': PEXELS_API_KEY }
+      });
+      if (!response.ok) throw new Error('API error');
+      const data = await response.json();
+      const newVideos = data.videos.map(video => {
+        // Get the best quality mp4 file (usually the first one)
+        const videoFile = video.video_files.find(f => f.quality === 'hd' || f.quality === 'sd') || video.video_files[0];
+        return {
+          id: video.id,
+          videoUrl: videoFile.link,
+          user: video.user?.name || 'Pexels',
+          caption: `${video.width}x${video.height} • ${video.duration}s`
+        };
+      });
+      return { videos: newVideos, hasMore: data.page < data.total_results / data.per_page };
+    } catch (err) {
+      console.warn('Pexels API error:', err);
+      return null;
+    }
+  }
+
+  // Load more videos
+  async function loadMoreVideos() {
+    if (isLoading || !hasMore) return;
+    isLoading = true;
+    let newVideos = [];
+    if (USE_MOCK) {
+      // For mock, just repeat the same list
+      newVideos = mockVideos.map(v => ({ ...v, id: v.id + videos.length }));
+      hasMore = videos.length < 30; // stop after 30 mock videos
+    } else {
+      const result = await fetchVideosFromPexels(currentPage);
+      if (result) {
+        newVideos = result.videos;
+        hasMore = result.hasMore;
+        currentPage++;
+      } else {
+        // fallback to mock if API fails
+        newVideos = mockVideos.map(v => ({ ...v, id: v.id + videos.length }));
+        hasMore = false;
+      }
+    }
+    videos = [...videos, ...newVideos];
+    renderReels();
+    isLoading = false;
+  }
+
+  // Render all reels
+  function renderReels() {
+    const container = document.getElementById('reelsContainer');
+    if (!container) return;
+    container.innerHTML = videos.map((video, index) => `
+      <div class="reel" data-index="${index}">
+        <video src="${video.videoUrl}" poster="" loop playsinline preload="metadata"></video>
+        <div class="reel-overlay">
+          <div class="reel-user"><i class="fab fa-tiktok"></i> @${escapeHtml(video.user)}</div>
+          <div class="reel-caption">${escapeHtml(video.caption)}</div>
+        </div>
+        <div class="reel-actions">
+          <button class="action-btn like-btn" data-id="${video.id}"><i class="far fa-heart"></i></button>
+          <button class="action-btn comment-btn"><i class="far fa-comment"></i></button>
+          <button class="action-btn share-btn"><i class="far fa-share-square"></i></button>
+        </div>
+      </div>
+    `).join('');
+    // Attach video play/pause on visibility (IntersectionObserver)
+    attachVideoObservers();
+    // Like button mock (just UI feedback)
+    document.querySelectorAll('.like-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const icon = btn.querySelector('i');
+        if (icon.classList.contains('far')) {
+          icon.classList.remove('far');
+          icon.classList.add('fas');
+          icon.style.color = '#ff3366';
+        } else {
+          icon.classList.remove('fas');
+          icon.classList.add('far');
+          icon.style.color = '';
+        }
+      });
+    });
+    // Comment & share mock alerts
+    document.querySelectorAll('.comment-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        alert('💬 Comments coming soon!');
+      });
+    });
+    document.querySelectorAll('.share-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        alert('🔗 Share feature coming soon!');
+      });
+    });
+  }
+
+  // IntersectionObserver to play/pause videos
+  function attachVideoObservers() {
+    const videos = document.querySelectorAll('.reel video');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const video = entry.target;
+        if (entry.isIntersecting) {
+          video.play().catch(e => console.log('autoplay blocked', e));
+          video.muted = false;
+        } else {
+          video.pause();
+          video.currentTime = 0;
+        }
+      });
+    }, { threshold: 0.5 });
+    videos.forEach(video => observer.observe(video));
+  }
+
+  // Infinite scroll on scroll container
+  const container = document.getElementById('reelsContainer');
+  container.addEventListener('scroll', () => {
+    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 200) {
+      loadMoreVideos();
+    }
+  });
+
+  function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+  // Particles, cursor glow, sidebar (same as before)
+  const cursorGlow = document.getElementById('cursorGlow');
+  document.addEventListener('mousemove', (e) => cursorGlow.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`);
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function createParticles() {
+    const count = 120;
+    for (let i=0; i<count; i++) particles.push({
+      x: Math.random()*canvas.width, y: Math.random()*canvas.height, radius: Math.random()*2.5+1,
+      speedX: (Math.random()-0.5)*0.8, speedY: (Math.random()-0.5)*0.6,
+      color: `rgba(0, ${Math.floor(150+Math.random()*105)}, 255, ${Math.random()*0.6+0.2})`
+    });
+  }
+  function drawParticles() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for (let p of particles) {
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.radius,0,Math.PI*2); ctx.fillStyle = p.color; ctx.fill();
+      p.x += p.speedX; p.y += p.speedY;
+      if (p.x<0) p.x = canvas.width; if (p.x>canvas.width) p.x=0;
+      if (p.y<0) p.y = canvas.height; if (p.y>canvas.height) p.y=0;
+    }
+    requestAnimationFrame(drawParticles);
+  }
+  window.addEventListener('resize', () => { resizeCanvas(); particles = []; createParticles(); });
+  resizeCanvas(); createParticles(); drawParticles();
+  function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+  async function logout() {
+    await fetch('/api/logout', { method: 'POST' }).catch(()=>{});
+    localStorage.removeItem('authToken'); sessionStorage.removeItem('authToken');
+    window.location.href = '/login.html';
+  }
+
+  // Start loading videos
+  loadMoreVideos();
+</script>
+</body>
+</html>
