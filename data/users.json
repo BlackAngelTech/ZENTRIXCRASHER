@@ -4,7 +4,7 @@
     "email": "ZentrizCrasher@gmail.com",
     "phone": "+1234567890",
     "age": 25,
-    "passwordHash": "$2b$10$Y9l6pUzZ3qjE1eZcQpfA0eXcGJfR5fXbQyqJN8hYzKxY5oCpGgqO",
+    "passwordHash": "1",
     "approved": true,
     "tier": "premium",
     "expiresAt": "2026-06-12T23:59:59.999Z",
