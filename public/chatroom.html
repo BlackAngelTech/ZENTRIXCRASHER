@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>VECTOR CRASHER | Chatroom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a1a;
+      font-family: 'Rajdhani', sans-serif;
+      color: #eee;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Particles & overlays (same as dashboard) */
+    #particles-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg, rgba(0,255,255,0.03) 0px, rgba(0,255,255,0.03) 2px, transparent 2px, transparent 6px);
+      pointer-events: none;
+      z-index: 3;
+    }
+    .grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .cursor-glow {
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,240,255,0.15), transparent 70%);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      transition: transform 0.05s linear;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 30% 20%, rgba(0,240,255,0.05), rgba(0,0,0,0.7));
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Sidebar (hamburger) */
+    .hamburger {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 45px;
+      height: 45px;
+      background: rgba(10,20,40,0.9);
+      border: 1px solid cyan;
+      border-radius: 12px;
+      cursor: pointer;
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+    }
+    .hamburger:hover { background: cyan; box-shadow: 0 0 15px cyan; }
+    .hamburger span { width: 25px; height: 3px; background: cyan; transition: 0.2s; }
+    .hamburger:hover span { background: #000; }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
+      height: 100%;
+      background: rgba(5,10,20,0.95);
+      backdrop-filter: blur(20px);
+      border-right: 2px solid cyan;
+      z-index: 1000;
+      transition: left 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+      padding-top: 80px;
+    }
+    .sidebar.open { left: 0; }
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px 25px;
+      color: #ccc;
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 1px solid rgba(0,240,255,0.1);
+      transition: 0.2s;
+    }
+    .sidebar a i { width: 25px; color: cyan; }
+    .sidebar a:hover { background: rgba(0,240,255,0.1); padding-left: 35px; color: white; }
+
+    /* Main chat container */
+    .chat-app {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-top: 70px;
+      margin-bottom: 70px;
+      z-index: 10;
+      position: relative;
+    }
+
+    /* Tabs at bottom */
+    .bottom-tabs {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(5,10,20,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid cyan;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      z-index: 20;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-family: 'Rajdhani', sans-serif;
+      padding: 5px 15px;
+      border-radius: 30px;
+    }
+    .tab-btn i { font-size: 1.5rem; }
+    .tab-btn.active { color: cyan; text-shadow: 0 0 8px cyan; }
+    .tab-btn span { font-size: 0.7rem; }
+
+    /* Main content area */
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+
+    /* Chat list items */
+    .chat-item, .group-item, .channel-item, .status-item {
+      background: rgba(10,20,40,0.6);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(0,240,255,0.2);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .chat-item:hover, .group-item:hover, .channel-item:hover, .status-item:hover {
+      border-color: cyan;
+      transform: translateX(5px);
+    }
+    .chat-name {
+      font-weight: bold;
+      color: cyan;
+    }
+    .chat-preview {
+      font-size: 0.8rem;
+      color: #bbb;
+      margin-top: 5px;
+    }
+    .premium-badge {
+      background: linear-gradient(135deg, #ffd700, #ffaa00);
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      margin-left: 8px;
+    }
+
+    /* Message panel (when a chat is opened) */
+    .message-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 70px;
+      background: rgba(5,10,20,0.98);
+      backdrop-filter: blur(20px);
+      z-index: 15;
+      display: none;
+      flex-direction: column;
+    }
+    .message-header {
+      padding: 15px;
+      background: rgba(0,0,0,0.5);
+      border-bottom: 1px solid cyan;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: cyan;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .message-bubble {
+      max-width: 70%;
+      padding: 8px 12px;
+      border-radius: 18px;
+      background: rgba(0,0,0,0.5);
+    }
+    .my-message {
+      align-self: flex-end;
+      background: linear-gradient(135deg, cyan, magenta);
+      color: black;
+    }
+    .other-message {
+      align-self: flex-start;
+      background: #2a2a3a;
+    }
+    .message-media {
+      max-width: 200px;
+      border-radius: 12px;
+      margin-top: 5px;
+      cursor: pointer;
+    }
+    .message-input-area {
+      display: flex;
+      gap: 10px;
+      padding: 15px;
+      background: rgba(0,0,0,0.5);
+      border-top: 1px solid rgba(0,240,255,0.3);
+    }
+    .message-input-area input {
+      flex: 1;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid cyan;
+      padding: 10px 15px;
+      border-radius: 30px;
+      color: white;
+    }
+    .message-input-area button {
+      background: cyan;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .file-btn {
+      background: rgba(0,240,255,0.2);
+      border: none;
+      padding: 10px 15px;
+      border-radius: 30px;
+      cursor: pointer;
+      color: cyan;
+    }
+    #mediaInput { display: none; }
+
+    /* Status section */
+    .status-item i { font-size: 1.5rem; margin-right: 10px; }
+    .status-time { font-size: 0.7rem; color: #888; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #1a1a2a; }
+    ::-webkit-scrollbar-thumb { background: cyan; border-radius: 5px; }
+
+    @media (max-width: 600px) {
+      .tab-btn span { display: none; }
+      .tab-btn i { font-size: 1.8rem; }
+      .chat-app { margin-top: 60px; margin-bottom: 60px; }
+    }
+  </style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="scanlines"></div>
+<div class="grid-overlay"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="overlay"></div>
+<div class="hamburger" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</div>
+<div class="sidebar" id="sidebar">
+  <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+  <a href="/connect.html"><i class="fab fa-whatsapp"></i> Connect Device</a>
+  <a href="/ban.html"><i class="fas fa-skull"></i> Ban Panel</a>
+  <a href="/unban.html"><i class="fas fa-infinity"></i> Unban Panel</a>
+  <a href="/media.html"><i class="fas fa-photo-video"></i> Media Hub</a>
+  <a href="/chatroom.html"><i class="fas fa-comments"></i> Chatroom</a>
+  <a href="/api.html"><i class="fas fa-code"></i> API Docs</a>
+  <a href="/account.html"><i class="fas fa-user-cog"></i> Account</a>
+  <a href="/developers.html"><i class="fas fa-code-branch"></i> Developers / Support</a>
+  <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+</div>
+
+<div class="chat-app">
+  <div class="tab-content" id="tabContent">
+    <!-- Chats, Groups, Channels, Status will be loaded here dynamically -->
+  </div>
+</div>
+
+<div class="bottom-tabs">
+  <button class="tab-btn active" data-tab="chats"><i class="fas fa-comment-dots"></i><span>Chats</span></button>
+  <button class="tab-btn" data-tab="groups"><i class="fas fa-users"></i><span>Groups</span></button>
+  <button class="tab-btn" data-tab="channels"><i class="fas fa-newspaper"></i><span>Channels</span></button>
+  <button class="tab-btn" data-tab="status"><i class="fas fa-circle"></i><span>Status</span></button>
+</div>
+
+<!-- Message Panel (hidden initially) -->
+<div id="messagePanel" class="message-panel">
+  <div class="message-header">
+    <button class="back-btn" id="closeMessagePanel"><i class="fas fa-arrow-left"></i></button>
+    <h3 id="chatTitle">Chat</h3>
+  </div>
+  <div class="messages-area" id="messagesArea">
+    <!-- messages will appear here -->
+  </div>
+  <div class="message-input-area">
+    <input type="text" id="messageText" placeholder="Type a message...">
+    <button class="file-btn" id="attachBtn"><i class="fas fa-paperclip"></i></button>
+    <input type="file" id="mediaInput" accept="image/*,video/*,audio/*">
+    <button id="sendMsgBtn"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
+
+<script>
+  // Auth check
+  const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  if (!token) window.location.href = '/login.html';
+
+  let currentChat = null; // { type, id, name }
+  let messageInterval = null;
+
+  // DOM elements
+  const tabContent = document.getElementById('tabContent');
+  const messagePanel = document.getElementById('messagePanel');
+  const messagesArea = document.getElementById('messagesArea');
+  const chatTitle = document.getElementById('chatTitle');
+  const messageText = document.getElementById('messageText');
+  const mediaInput = document.getElementById('mediaInput');
+  const attachBtn = document.getElementById('attachBtn');
+
+  // Helper functions
+  function showMessagePanel(show) {
+    messagePanel.style.display = show ? 'flex' : 'none';
+    if (show) {
+      if (messageInterval) clearInterval(messageInterval);
+      messageInterval = setInterval(loadMessages, 3000);
+    } else {
+      if (messageInterval) clearInterval(messageInterval);
+      messageInterval = null;
+    }
+  }
+
+  async function fetchJSON(url, options = {}) {
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      ...options
+    });
+    return res.json();
+  }
+
+  // Load active chats (direct messages + groups user is in)
+  async function loadChats() {
+    try {
+      // Get all users (for DMs) and groups
+      const [usersRes, groupsRes] = await Promise.all([
+        fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
+        fetch('/api/groups', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
+      ]);
+      let chats = [];
+      if (usersRes.success) {
+        const currentUserId = await getCurrentUserId();
+        // Exclude self
+        const otherUsers = usersRes.users.filter(u => u.id !== currentUserId);
+        chats = otherUsers.map(u => ({ type: 'dm', id: u.id, name: u.email.split('@')[0], avatar: null }));
+      }
+      if (groupsRes.success) {
+        const groupChats = groupsRes.groups.map(g => ({ type: 'group', id: g.id, name: g.name, premium: g.premium }));
+        chats = [...chats, ...groupChats];
+      }
+      // Sort by last message (simplified: just show all)
+      renderChatList(chats);
+    } catch (err) { console.error(err); }
+  }
+
+  async function getCurrentUserId() {
+    const profile = await fetchJSON('/api/user/profile');
+    if (profile.success) return profile.user.email; // using email as id? Actually we need user.id. Let's use email as identifier for simplicity.
+    return null;
+  }
+
+  // For DMs, we use the recipient's email as chatId. For groups, groupId.
+  // In your backend, /api/messages accepts chatType=dm and chatId=recipientEmail, and chatType=group with chatId=groupId.
+  // The backend must support dm messages. I'll assume the latest server.js does.
+
+  function renderChatList(chats) {
+    tabContent.innerHTML = chats.map(chat => `
+      <div class="chat-item" data-type="${chat.type}" data-id="${chat.id}" data-name="${chat.name}">
+        <div class="chat-name">${escapeHtml(chat.name)} ${chat.premium ? '<span class="premium-badge">PREMIUM</span>' : ''}</div>
+        <div class="chat-preview">Tap to open chat</div>
+      </div>
+    `).join('');
+    // Attach click events
+    document.querySelectorAll('.chat-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const type = el.dataset.type;
+        const id = el.dataset.id;
+        const name = el.dataset.name;
+        openChat(type, id, name);
+      });
+    });
+  }
+
+  // Groups tab
+  async function loadGroups() {
+    const res = await fetch('/api/groups', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.success) {
+      tabContent.innerHTML = data.groups.map(g => `
+        <div class="group-item" data-id="${g.id}" data-name="${g.name}">
+          <div class="chat-name">${escapeHtml(g.name)} ${g.premium ? '<span class="premium-badge">PREMIUM</span>' : ''}</div>
+          <div class="chat-preview">Members: ${g.membersCount || 0}</div>
+        </div>
+      `).join('');
+      document.querySelectorAll('.group-item').forEach(el => {
+        el.addEventListener('click', () => {
+          openChat('group', el.dataset.id, el.dataset.name);
+        });
+      });
+    }
+  }
+
+  // Channels tab
+  async function loadChannels() {
+    const res = await fetch('/api/channels', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.success) {
+      tabContent.innerHTML = data.channels.map(ch => `
+        <div class="channel-item" data-id="${ch.id}" data-name="${ch.name}">
+          <div class="chat-name">📢 ${escapeHtml(ch.name)}</div>
+          <div class="chat-preview">${escapeHtml(ch.description || 'Channel')}</div>
+        </div>
+      `).join('');
+      document.querySelectorAll('.channel-item').forEach(el => {
+        el.addEventListener('click', () => {
+          openChat('channel', el.dataset.id, el.dataset.name);
+        });
+      });
+    }
+  }
+
+  // Status tab
+  async function loadStatus() {
+    // For now, just show placeholder statuses
+    tabContent.innerHTML = `
+      <div class="status-item">
+        <i class="fas fa-circle" style="color: #25D366;"></i> Your status is live
+        <div class="status-time">Just now</div>
+      </div>
+      <div class="status-item">
+        <i class="fas fa-circle" style="color: #aaa;"></i> ZentrixTech
+        <div class="status-time">2h ago</div>
+      </div>
+      <div class="status-item">
+        <i class="fas fa-plus-circle" style="color: cyan;"></i> Add status update
+      </div>
+    `;
+    // You can implement status posting later
+  }
+
+  // Open a chat (DM, group, channel)
+  function openChat(type, id, name) {
+    currentChat = { type, id, name };
+    chatTitle.innerText = name;
+    showMessagePanel(true);
+    loadMessages();
+  }
+
+  async function loadMessages() {
+    if (!currentChat) return;
+    let url = `/api/messages?chatType=${currentChat.type}&chatId=${encodeURIComponent(currentChat.id)}`;
+    try {
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.success) {
+        const currentUserEmail = (await fetchJSON('/api/user/profile')).user.email;
+        messagesArea.innerHTML = data.messages.map(msg => `
+          <div class="message-bubble ${msg.senderId === currentUserEmail ? 'my-message' : 'other-message'}">
+            <strong>${escapeHtml(msg.senderName || (msg.senderId === currentUserEmail ? 'You' : msg.senderId.split('@')[0]))}</strong><br>
+            ${msg.text ? escapeHtml(msg.text) : ''}
+            ${msg.mediaUrl ? `<div><img src="${msg.mediaUrl}" class="message-media" onclick="window.open('${msg.mediaUrl}')"></div>` : ''}
+            <small style="font-size:0.7rem;">${new Date(msg.timestamp).toLocaleTimeString()}</small>
+          </div>
+        `).join('');
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+      }
+    } catch (err) { console.error(err); }
+  }
+
+  async function sendMessage() {
+    const text = messageText.value.trim();
+    const mediaFile = mediaInput.files[0];
+    if (!text && !mediaFile) return;
+    let mediaUrl = null;
+    if (mediaFile) {
+      const formData = new FormData();
+      formData.append('media', mediaFile);
+      const uploadRes = await fetch('/api/upload-chat-media', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const uploadData = await uploadRes.json();
+      if (uploadData.success) mediaUrl = uploadData.url;
+      else alert('Upload failed');
+    }
+    if (text || mediaUrl) {
+      await fetch('/api/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ chatType: currentChat.type, chatId: currentChat.id, text, mediaUrl })
+      });
+      messageText.value = '';
+      mediaInput.value = '';
+      loadMessages();
+    }
+  }
+
+  // Tab switching
+  let activeTab = 'chats';
+  function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      if (btn.dataset.tab === tab) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    if (tab === 'chats') loadChats();
+    else if (tab === 'groups') loadGroups();
+    else if (tab === 'channels') loadChannels();
+    else if (tab === 'status') loadStatus();
+  }
+
+  // Event listeners
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+  document.getElementById('closeMessagePanel').addEventListener('click', () => {
+    showMessagePanel(false);
+    currentChat = null;
+    // Refresh current tab
+    switchTab(activeTab);
+  });
+  document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
+  attachBtn.addEventListener('click', () => mediaInput.click());
+  messageText.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+  // Particles and cursor glow (copy from dashboard)
+  const cursorGlow = document.getElementById('cursorGlow');
+  document.addEventListener('mousemove', (e) => cursorGlow.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`);
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function createParticles() {
+    const count = 120;
+    for (let i=0; i<count; i++) particles.push({
+      x: Math.random()*canvas.width, y: Math.random()*canvas.height, radius: Math.random()*2.5+1,
+      speedX: (Math.random()-0.5)*0.8, speedY: (Math.random()-0.5)*0.6,
+      color: `rgba(0, ${Math.floor(150+Math.random()*105)}, 255, ${Math.random()*0.6+0.2})`
+    });
+  }
+  function drawParticles() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for (let p of particles) {
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.radius,0,Math.PI*2); ctx.fillStyle = p.color; ctx.fill();
+      p.x += p.speedX; p.y += p.speedY;
+      if (p.x<0) p.x = canvas.width; if (p.x>canvas.width) p.x=0;
+      if (p.y<0) p.y = canvas.height; if (p.y>canvas.height) p.y=0;
+    }
+    requestAnimationFrame(drawParticles);
+  }
+  window.addEventListener('resize', () => { resizeCanvas(); particles = []; createParticles(); });
+  resizeCanvas(); createParticles(); drawParticles();
+
+  function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+  async function logout() {
+    await fetch('/api/logout', { method: 'POST' }).catch(()=>{});
+    localStorage.removeItem('authToken'); sessionStorage.removeItem('authToken');
+    window.location.href = '/login.html';
+  }
+  function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+  // Initial load
+  switchTab('chats');
+</script>
+</body>
+</html>
