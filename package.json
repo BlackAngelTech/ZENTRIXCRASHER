@@ -1,0 +1,27 @@
+{
+  "name": "vector-crasher-pro",
+  "version": "3.0.0",
+  "type": "module",
+  "description": "Ultimate bug platform with WhatsApp pairing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "awesome-phonenumber": "^5.9.0",
+    "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "fs-extra": "^11.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4",
+    "@whiskeysockets/baileys": "npm:@zentrix/baileys@latest",
+    "@hapi/boom": "^10.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
